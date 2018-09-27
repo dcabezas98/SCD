@@ -157,11 +157,20 @@ He ejecutado el programa con distinto número de subintervalos y con
 distinto número de hebras y he obtenido los siguientes tiempos de
 ejecución.
 
+\textbf{Nota:} Hay una errata en los valores de $m$ de todas las
+tablas, así como en los valores del eje de abscisas de todas las
+gráficas. Cuando pone $x\times 10^y$ subintervalos, en realidad la
+medición la he realizado con $x\times 2^y$ subintervalos.
+
 \begin{figure}[H]
   \centering
   \subfigure[Tiempos para 8 threads]{\includegraphics[width=110mm]{graficas_y_tablas/mediciones_n=8}}
-  \subfigure[Tiempos para 4 threads]{\includegraphics[width=110mm]{graficas_y_tablas/mediciones_n=4}}
 \end{figure}
+
+\begin{figure}{H}
+  \centering
+  \subfigure[Tiempos para 4 threads]{\includegraphics[width=110mm]{graficas_y_tablas/mediciones_n=4}}
+  \end{figure}
 
 También he calculado la ganancia obtenida tanto en asignación
 contigua como en entrelazada de los intervalos.
@@ -183,13 +192,19 @@ supone el uso del paralelismo, así como la ganancia obtenida.
 \begin{figure}[H]
   \centering
    \subfigure[Tiempos para 4 threads]{\includegraphics[width=110mm]{graficas_y_tablas/grafica_n=4}}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
   \subfigure[Ganancias]{\includegraphics[width=120mm]{graficas_y_tablas/grafica_ganancia}}
 \end{figure}
 
 \section{Conclusiones}
 Como era de esperar, se ha obtenido una significante mejora al
-trabajar varias hebras a la vez. Se han obtenido mejores resultados
-con 8 hebras que con 4 y en el caso de 8 hebras, la asignación
-entrelazada ha presentado menores tiempos de ejecución.
+trabajar varias hebras a la vez. En el caso de 8 hebras, la asignación
+entrelazada ha presentado menores tiempos de ejecución. Se han
+obtenido mejores resultados con 8 hebras que con 4, aunque no mucho
+mejores. Esto se debe a que mi ordenador sólo dispone de 4 núcleos
+físicos.
 
 \end{document}

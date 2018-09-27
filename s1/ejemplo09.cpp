@@ -47,7 +47,7 @@ double funcion_hebra_contigua( long i ) //Asignación contigua
 {
   long chunk = ceil(m/n);
   long top = (i+1)*chunk;
-  if(i == n-1) top = m-1;
+  if(i == n-1) top = m;
   
   double suma = 0.0;
   for(long j = i*chunk; j < top; j++)
@@ -59,7 +59,7 @@ double funcion_hebra_contigua( long i ) //Asignación contigua
 double funcion_hebra_entrelazada( long i ) //Asignación entrelazada
 {
   double suma = 0.0;
-  for(long j = i; j < m-1; j+=n)
+  for(long j = i; j < m; j+=n)
     suma += f( (j+double(0.5))/m );
 
   return suma;
