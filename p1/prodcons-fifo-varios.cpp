@@ -14,7 +14,7 @@ using namespace SEM ;
 const int num_prod = 3, num_cons = 4;
 
 const int num_items = 40 ,   // número de items
-  tam_vec = 5;   // tamaño del buffer
+  tam_vec = 15;   // tamaño del buffer
 
 int producidos = 0, consumidos = 0, in = 0, out = 0;
 
@@ -61,12 +61,11 @@ int producir_dato()
 void consumir_dato( unsigned dato )
 {
    assert( dato < num_items );
-   cont_cons[dato] ++ ;
-   this_thread::sleep_for( chrono::milliseconds( aleatorio<20,100>() ));
-
    mtx_output.lock();
    cout << "                  consumido: " << dato << endl ;
    mtx_output.unlock();   
+   cont_cons[dato] ++ ;
+   this_thread::sleep_for( chrono::milliseconds( aleatorio<20,100>() ));
 }
 
 //----------------------------------------------------------------------
@@ -107,14 +106,12 @@ void  funcion_hebra_productora(  )
       producidos++;
       mtx_producidos.unlock();
       
-      dato = producir_dato() ;
-      
+      dato = producir_dato();
       sem_wait(puede_prod);
-
       sem_wait(acceso_in);
       buf[in] = dato;
       in = (in+1)%tam_vec;
-      sem_wait(acceso_out);
+      sem_signal(acceso_in);
 
       sem_signal(puede_cons);
     }
