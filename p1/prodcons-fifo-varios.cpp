@@ -11,19 +11,22 @@ using namespace SEM ;
 //**********************************************************************
 // variables compartidas
 
+const int num_prod = 3, num_cons = 4;
+
 const int num_items = 40 ,   // número de items
   tam_vec = 5;   // tamaño del buffer
 
-int contador = 0;
+int producidos = 0, consumidos = 0, in = 0, out = 0;
 
 unsigned  cont_prod[num_items] = {0}, // contadores de verificación: producidos
   cont_cons[num_items] = {0}, // contadores de verificación: consumidos
   buf[tam_vec] = {0};
 
 Semaphore puede_prod(tam_vec), puede_cons(0); // para controlar que no se lea con el buffer vacío ni se escriba con el buffer lleno
-Semaphore acceso(1);
 
-mutex mtx_output;
+Semaphore acceso_in(1), acceso_out(1);
+
+mutex mtx_output, mtx_consumidos, mtx_producidos;
 //**********************************************************************
 // plantilla de función para generar un entero aleatorio uniformemente
 // distribuido entre dos valores enteros, ambos incluidos
@@ -49,7 +52,7 @@ int producir_dato()
    mtx_output.lock();
    cout << "producido: " << contador << endl << flush ;
    mtx_output.unlock();
-   
+
    cont_prod[contador] ++ ;
    return contador++ ;
 }
@@ -63,7 +66,7 @@ void consumir_dato( unsigned dato )
 
    mtx_output.lock();
    cout << "                  consumido: " << dato << endl ;
-   mtx_output.unlock();
+   mtx_output.unlock();   
 }
 
 //----------------------------------------------------------------------
@@ -93,53 +96,84 @@ void  funcion_hebra_productora(  )
 
   int dato;
   
-   for( unsigned i = 0 ; i < num_items ; i++ )
-   {
+  while(true)
+    {
+      mtx_producidos.lock();
+      if(producidos >= num_items){
+	mtx_producidos.unlock();
+	break;
+      }
+      
+      producidos++;
+      mtx_producidos.unlock();
+      
       dato = producir_dato() ;
       
       sem_wait(puede_prod);
-      
-      sem_wait(acceso);
-      buf[contador++] = dato;
-      sem_signal(acceso);
+
+      sem_wait(acceso_in);
+      buf[in] = dato;
+      in = (in+1)%tam_vec;
+      sem_wait(acceso_out);
 
       sem_signal(puede_cons);
-   }
+    }
 }
 
 //----------------------------------------------------------------------
 
 void funcion_hebra_consumidora(  )
 {
+
   int dato;
   
-   for( unsigned i = 0 ; i < num_items ; i++ )
-   {
-     sem_wait(puede_cons);
+  while(true)
+    {
+      mtx_consumidos.lock();
+      if(consumidos >= num_items){
+	mtx_consumidos.unlock();
+	break;
+      }
+      consumidos++;
+      mtx_consumidos.unlock();
+      
+      sem_wait(puede_cons);
 
-     sem_wait(acceso);
-     dato = buf[--contador];
-     sem_signal(acceso);
-       
-     sem_signal(puede_prod);
+      sem_wait(acceso_out);
+      dato = buf[out];
+      out = (out+1)%tam_vec;
+      sem_signal(acceso_out);
+      
+      sem_signal(puede_prod);
      
-     consumir_dato( dato ) ;
+      consumir_dato( dato ) ;
     }
 }
+
 //----------------------------------------------------------------------
 
 int main()
 {
    cout << "--------------------------------------------------------" << endl
-        << "Problema de los productores-consumidores (solución LIFO)." << endl
+        << "Problema de los productores-consumidores (solución FIFO)." << endl
         << "--------------------------------------------------------" << endl
         << flush ;
 
-   thread hebra_productora ( funcion_hebra_productora ),
-          hebra_consumidora( funcion_hebra_consumidora );
+   thread hebra_productora[num_prod], hebra_consumidora[num_cons];
 
-   hebra_productora.join() ;
-   hebra_consumidora.join() ;
+   int i,j;
+   
+   for(i = 0; i < num_prod; i++)
+     hebra_productora[i] = thread(funcion_hebra_productora);
+
+   for(j = 0; j < num_cons; j++)
+     hebra_consumidora[j] = thread(funcion_hebra_consumidora);
+
+   for(i = 0; i < num_prod; i++)
+     hebra_productora[i].join();
+
+   for(j = 0; j < num_cons; j++)
+     hebra_consumidora[j].join();
 
    test_contadores();
 }

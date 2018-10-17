@@ -11,8 +11,12 @@ using namespace SEM ;
 //**********************************************************************
 // variables compartidas
 
+const int num_prod = 3, num_cons = 4;
+
 const int num_items = 40 ,   // número de items
   tam_vec = 5;   // tamaño del buffer
+
+int producidos = 0, consumidos = 0;
 
 int contador = 0;
 
@@ -23,7 +27,7 @@ unsigned  cont_prod[num_items] = {0}, // contadores de verificación: producidos
 Semaphore puede_prod(tam_vec), puede_cons(0); // para controlar que no se lea con el buffer vacío ni se escriba con el buffer lleno
 Semaphore acceso(1);
 
-mutex mtx_output;
+mutex mtx_output, mtx_consumidos, mtx_producidos;
 //**********************************************************************
 // plantilla de función para generar un entero aleatorio uniformemente
 // distribuido entre dos valores enteros, ambos incluidos
@@ -93,17 +97,26 @@ void  funcion_hebra_productora(  )
 
   int dato;
   
-   for( unsigned i = 0 ; i < num_items ; i++ )
+  while(true)
    {
-      dato = producir_dato() ;
-      
-      sem_wait(puede_prod);
-      
-      sem_wait(acceso);
-      buf[contador++] = dato;
-      sem_signal(acceso);
+     mtx_producidos.lock();
+     if(producidos >= num_items){
+       mtx_producidos.unlock();
+       break;
+     }
+     
+     producidos++;
+     mtx_producidos.unlock();
 
-      sem_signal(puede_cons);
+     dato = producir_dato();
+    
+     sem_wait(puede_prod);
+       
+     sem_wait(acceso);
+     buf[contador++] = dato;
+     sem_signal(acceso);
+
+     sem_signal(puede_cons);
    }
 }
 
@@ -113,19 +126,28 @@ void funcion_hebra_consumidora(  )
 {
   int dato;
   
-   for( unsigned i = 0 ; i < num_items ; i++ )
-   {
-     sem_wait(puede_cons);
-
-     sem_wait(acceso);
-     dato = buf[--contador];
-     sem_signal(acceso);
+  while(true)
+    {
+      mtx_consumidos.lock();
+      if(consumidos >= num_items){
+	mtx_consumidos.unlock();
+	break;
+      }
+      consumidos++;
+      mtx_consumidos.unlock();
        
-     sem_signal(puede_prod);
+      sem_wait(puede_cons);
+
+      sem_wait(acceso);
+      dato = buf[--contador];
+      sem_signal(acceso);
+       
+      sem_signal(puede_prod);
      
-     consumir_dato( dato ) ;
+      consumir_dato( dato ) ;
     }
 }
+
 //----------------------------------------------------------------------
 
 int main()
@@ -135,11 +157,21 @@ int main()
         << "--------------------------------------------------------" << endl
         << flush ;
 
-   thread hebra_productora ( funcion_hebra_productora ),
-          hebra_consumidora( funcion_hebra_consumidora );
+   thread hebra_productora[num_prod], hebra_consumidora[num_cons];
 
-   hebra_productora.join() ;
-   hebra_consumidora.join() ;
+   int i,j;
+   
+   for(i = 0; i < num_prod; i++)
+     hebra_productora[i] = thread(funcion_hebra_productora);
+
+   for(j = 0; j < num_cons; j++)
+     hebra_consumidora[j] = thread(funcion_hebra_consumidora);
+
+   for(i = 0; i < num_prod; i++)
+     hebra_productora[i].join();
+
+   for(j = 0; j < num_cons; j++)
+     hebra_consumidora[j].join();
 
    test_contadores();
 }
