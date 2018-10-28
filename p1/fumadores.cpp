@@ -35,7 +35,6 @@ template< int min, int max > int aleatorio()
 void funcion_hebra_estanquero(  )
 {
   int item;
-  int i = 0;
   while(num_items>0){
 
     item = aleatorio<0,num_fumadores-1>();
