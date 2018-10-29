@@ -3,10 +3,10 @@
 // Sistemas concurrentes y Distribuidos.
 // Seminario 2. Introducción a los monitores en C++11.
 //
-// archivo: prodcons1_su_lifo.cpp
+// archivo: prodcons1_su_fifo.cpp
 // Ejemplo de un monitor en C++11 con semántica SU, para el problema
 // del productor/consumidor, con un único productor y un único consumidor.
-// Opcion LIFO (stack)
+// Opcion FIFO (queue)
 //
 // -----------------------------------------------------------------------------
 
@@ -107,18 +107,18 @@ void test_contadores()
 }
 
 // *****************************************************************************
-// clase para monitor buffer, version LIFO, semántica SU, un prod. y un cons.
+// clase para monitor buffer, version FIFO, semántica SU, un prod. y un cons.
 
 class ProdCons1SU : public HoareMonitor
 {
- private:
- static const int           // constantes:
-   num_celdas_total = 10;   //  núm. de entradas del buffer
- int                        // variables permanentes
-   buffer[num_celdas_total],//  buffer de tamaño fijo, con los datos
-   primera_libre ;          //  indice de celda de la próxima inserción
+private:
+  static const int           // constantes:
+  num_celdas_total = 10;   //  núm. de entradas del buffer
+  int buffer[num_celdas_total],//  buffer de tamaño fijo, con los datos
+    primera_libre,          //  indice de celda de la próxima inserción
+    primera_ocupada, n;
   CondVar        // colas condicion:
-   ocupadas,                //  cola donde espera el consumidor (n>0)
+    ocupadas,                //  cola donde espera el consumidor (n>0)
     libres;                 //  cola donde espera el productor  (n<num_celdas_total)
 
  public:                    // constructor y métodos públicos
@@ -130,9 +130,11 @@ class ProdCons1SU : public HoareMonitor
 
 ProdCons1SU::ProdCons1SU(  )
 {
-   primera_libre = 0 ;
-   ocupadas = newCondVar();
-   libres = newCondVar();
+  primera_libre = 0;
+  primera_ocupada = 0;
+  n = 0;
+  ocupadas = newCondVar();
+  libres = newCondVar();
 }
 // -----------------------------------------------------------------------------
 // función llamada por el consumidor para extraer un dato
@@ -140,15 +142,15 @@ ProdCons1SU::ProdCons1SU(  )
 int ProdCons1SU::leer(  )
 {
    // esperar bloqueado hasta que 0 < num_celdas_ocupadas
-   if ( primera_libre == 0 )
+   if (n <= 0)
       ocupadas.wait();
 
    // hacer la operación de lectura, actualizando estado del monitor
-   assert( 0 < primera_libre  );
-   primera_libre-- ;
-   const int valor = buffer[primera_libre] ;
-
-
+   assert( n > 0 );
+   const int valor = buffer[primera_ocupada];
+   primera_ocupada = (primera_ocupada+1)%num_celdas_total;
+   n--;
+   
    // señalar al productor que hay un hueco libre, por si está esperando
    libres.signal();
         
@@ -160,15 +162,16 @@ int ProdCons1SU::leer(  )
 void ProdCons1SU::escribir( int valor )
 {
   // esperar bloqueado hasta que num_celdas_ocupadas < num_celdas_total
-  if ( primera_libre == num_celdas_total )
+  if (n >= num_celdas_total)
     libres.wait();
 
   //cout << "escribir: ocup == " << num_celdas_ocupadas << ", total == " << num_celdas_total << endl ;
-  assert( primera_libre < num_celdas_total );
+  assert( n < num_celdas_total );
 
   // hacer la operación de inserción, actualizando estado del monitor
   buffer[primera_libre] = valor ;
-   primera_libre++ ;
+  primera_libre = (primera_libre+1)%num_celdas_total;
+  n++;
    
    // señalar al consumidor que ya hay una celda ocupada (por si esta esperando)
    ocupadas.signal();
@@ -199,7 +202,7 @@ void funcion_hebra_consumidora(MRef<ProdCons1SU> monitor)
 int main()
 {
    cout << "-------------------------------------------------------------------------------" << endl
-        << "Problema de los productores-consumidores (1 prod/cons, Monitor SU, buffer LIFO). " << endl
+        << "Problema de los productores-consumidores (1 prod/cons, Monitor SU, buffer FIFO). " << endl
         << "-------------------------------------------------------------------------------" << endl
         << flush ;
 
