@@ -14,7 +14,8 @@
 using namespace HM;
 using namespace std;
 
-const int num_clientes = 3;
+const int num_clientes = 4,
+  num_barberos = 2; // Cada uno con su silla y su cama
  
 mutex output_mtx;
 
@@ -40,16 +41,16 @@ void esperarFueraBarberia(int i)
   output_mtx.unlock();
 }
 
-void cortarPeloACliente()
+void cortarPeloACliente(int j)
 {
   output_mtx.lock();
-  cout << "\t\t\t\t\tBarbero: Manos a la obra!" << endl;
+  cout << "\t\t\t\t\tBarbero " << j << ": Manos a la obra!" << endl;
   output_mtx.unlock();
   
   this_thread::sleep_for(chrono::milliseconds(aleatorio<20,100>()));
   
   output_mtx.lock();
-  cout << "\t\t\t\t\tBarbero: Ya está!" << endl;
+  cout << "\t\t\t\t\tBarbero " << j << ": Ya está!" << endl;
   output_mtx.unlock();
 }
 
@@ -57,86 +58,103 @@ class Barberia : public HoareMonitor
 {
 private:
 
-  CondVar sala_espera, silla_pelar, cama;
+  CondVar sala_espera, silla_pelar[num_barberos], cama[num_barberos];
 
 public:
   Barberia();
   void cortarPelo(int i);
-  void siguienteCliente();
-  void finCliente();
+  void siguienteCliente(int j);
+  void finCliente(int j);
 };
 
 Barberia::Barberia()
 {
-  cama = newCondVar();
-  silla_pelar = newCondVar();
   sala_espera = newCondVar();
+  
+  for(int j = 0; j < num_barberos; j++){
+    silla_pelar[j] = newCondVar();
+    cama[j] = newCondVar();
+  }
 }
 
 void Barberia::cortarPelo(int i)
 {
-  //if(sala_espera.empty() and silla_pelar.empty()){
-  if(!cama.empty()){
-    output_mtx.lock();
-    cout << i << ": Que suerte! La barbería vacía!" << endl;
-    output_mtx.unlock();
+
+  int sitio = -1;
     
-    cama.signal();
-  }
-  else{
+  if(sala_espera.empty())
+    for(int j = 0; j < num_barberos and sitio == -1; j++)
+      //if(silla_pelar[j].empty()){
+      if(!cama[j].empty()){ 
+
+	output_mtx.lock();
+	cout << i << ": Que suerte! El barbero " << j << " me atiende al llegar!" << endl;
+	output_mtx.unlock();
+	
+	sitio = j;
+	cama[sitio].signal();
+      }
+
+  while(sitio == -1){
+
     output_mtx.lock();
     cout << i << ": Pues nada, toca esperar." << endl;
     output_mtx.unlock();
-    
-    sala_espera.wait();
 
-    output_mtx.lock();
-    cout << i << ": Por fin es mi turno." << endl;
-    output_mtx.unlock();
+    sala_espera.wait();
+    
+    for(int j = 0; j < num_barberos and sitio == -1; j++){
+      if(silla_pelar[j].empty()){
+	sitio = j;
+	output_mtx.lock();
+	cout << i << ": Por fin es mi turno. Me atiende el barbero " << sitio << endl;
+	output_mtx.unlock();
+      }
+    }
   }
-  
-  silla_pelar.wait();
+
+  silla_pelar[sitio].wait();
 
   output_mtx.lock();
-  cout << i << ": Muy satisfecho con mi pelado." << endl;
+  cout << i << ": Muy satisfecho con mi pelado. Gracias barbero " << sitio << endl;
   output_mtx.unlock();
 }
 
-void Barberia::siguienteCliente()
+void Barberia::siguienteCliente(int j)
 {
-  if(sala_espera.empty() and silla_pelar.empty()){
+  if(sala_espera.empty() and silla_pelar[j].empty()){
     
     output_mtx.lock();
-    cout << "\t\t\t\t\tBarbero: No hay nadie. A dormir!" << endl;
+    cout << "\t\t\t\t\tBarbero " << j << ": A dormir!" << endl;
     output_mtx.unlock();
     
-    cama.wait();
+    cama[j].wait();
   }
 
-  else if(silla_pelar.empty()){
+  else if(silla_pelar[j].empty()){
     output_mtx.lock();
-    cout << "\t\t\t\t\tBarbero: Siguiente cliente!" << endl;
+    cout << "\t\t\t\t\tBarbero " << j << ": Siguiente cliente!" << endl;
     output_mtx.unlock();
     
     sala_espera.signal();
   }
 }
 
-void Barberia::finCliente()
+void Barberia::finCliente(int j)
 {
   output_mtx.lock();
-  cout << "\t\t\t\t\tBarbero: Gracias por venir!" << endl;
+  cout << "\t\t\t\t\tBarbero " << j << ": Gracias por venir!" << endl;
   output_mtx.unlock();
   
-  silla_pelar.signal();
+  silla_pelar[j].signal();
 }
 
-void funcionHebraBarbero(MRef<Barberia> monitor)
+void funcionHebraBarbero(MRef<Barberia> monitor, int j)
 {
   while(true){
-    monitor->siguienteCliente();
-    cortarPeloACliente();
-    monitor->finCliente();
+    monitor->siguienteCliente(j);
+    cortarPeloACliente(j);
+    monitor->finCliente(j);
   }
 }
 
@@ -155,12 +173,13 @@ int main()
         << "-------------------------------------------------------------------------------" << endl
         << flush ;
 
-  thread hebra_cliente[num_clientes], hebra_barbero;
+  thread hebra_cliente[num_clientes], hebra_barbero[num_barberos];
   MRef<Barberia> monitor = Create<Barberia>();
 
-  int i;
+  int i, j;
 
-  hebra_barbero = thread(funcionHebraBarbero, monitor);
+  for(j = 0; j < num_barberos; j++)
+    hebra_barbero[j] = thread(funcionHebraBarbero, monitor, j);
 
   for(i = 0; i < num_clientes; i++)
     hebra_cliente[i] = thread(funcionHebraCliente, monitor, i);
@@ -168,5 +187,6 @@ int main()
   for(i = 0; i < num_clientes; i++)
     hebra_cliente[i].join();
 
-  hebra_barbero.join();
+  for(j = 0; j < num_barberos; j++)
+    hebra_barbero[j].join();
 }
