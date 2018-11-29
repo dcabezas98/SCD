@@ -49,11 +49,11 @@ template< int min, int max > int aleatorio()
 // y lleva espera aleatorio
 int producir(int id)
 {
-   static int contador = 0 ;
+   static int contador = id*bloqueprod ;
    sleep_for( milliseconds( aleatorio<10,100>()) );
    contador++ ;
-   cout << "Productor " << id << " ha producido valor " << id*bloqueprod+contador << endl << flush;
-   return id*bloqueprod+contador ;
+   cout << "Productor " << id << " ha producido valor " << contador << endl << flush;
+   return contador ;
 }
 // ---------------------------------------------------------------------
 
@@ -65,7 +65,7 @@ void funcion_productor(int id)
       int valor_prod = producir(id);
       // enviar valor
       cout << "Productor " << id << " va a enviar valor " << valor_prod << endl << flush;
-      MPI_Ssend( &valor_prod, 1, MPI_INT, id_buffer, 0, MPI_COMM_WORLD );
+      MPI_Ssend( &valor_prod, 1, MPI_INT, np, etiq_prod, MPI_COMM_WORLD );
    }
 }
 // ---------------------------------------------------------------------
@@ -86,8 +86,8 @@ void funcion_consumidor(int id)
 
    for( unsigned int i=0 ; i < bloquecons; i++ )
    {
-      MPI_Ssend( &peticion,  1, MPI_INT, id_buffer, 0, MPI_COMM_WORLD);
-      MPI_Recv ( &valor_rec, 1, MPI_INT, id_buffer, 0, MPI_COMM_WORLD,&estado );
+      MPI_Ssend( &peticion,  1, MPI_INT, np, etiq_cons, MPI_COMM_WORLD);
+      MPI_Recv ( &valor_rec, 1, MPI_INT, np, etiq_cons, MPI_COMM_WORLD,&estado );
       cout << "\t\t\t\t\t\tConsumidor " << id << " ha recibido valor " << valor_rec << endl << flush ;
       consumir( id, valor_rec );
    }
@@ -137,7 +137,7 @@ void funcion_buffer()
 	primera_ocupada = (primera_ocupada+1) % tam_vector ;
 	num_celdas_ocupadas-- ;
 	cout << "\t\t\tBuffer va a enviar valor " << valor << endl ;
-	MPI_Ssend( &valor, 1, MPI_INT, id_consumidor, 0, MPI_COMM_WORLD);
+	MPI_Ssend( &valor, 1, MPI_INT, id_fuente, etiq_cons, MPI_COMM_WORLD);
       }
    }
 }
