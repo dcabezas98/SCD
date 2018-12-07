@@ -81,11 +81,11 @@ void funcion_filosofos( int id )
 	cout <<"Filósofo " <<id <<" comienza a comer" <<endl ;
 	sleep_for( milliseconds( aleatorio<50,500>() ) );
 
-	cout <<"Filósofo " <<id <<" suelta ten. izq. " <<id_ten_izq <<endl;
-	MPI_Ssend(&peticion, 1, MPI_INT, id_ten_izq, 0, MPI_COMM_WORLD);
-
 	cout<< "Filósofo " <<id <<" suelta ten. der. " <<id_ten_der <<endl;
 	MPI_Ssend(&peticion, 1, MPI_INT, id_ten_der, 0, MPI_COMM_WORLD);
+	
+	cout <<"Filósofo " <<id <<" suelta ten. izq. " <<id_ten_izq <<endl;
+	MPI_Ssend(&peticion, 1, MPI_INT, id_ten_izq, 0, MPI_COMM_WORLD);
 
 	cout << "Filosofo " << id << " comienza a pensar" << endl;
 	sleep_for( milliseconds( aleatorio<50,500>() ) );
