@@ -21,7 +21,7 @@ using namespace std::this_thread;
 using namespace std::chrono;
 
 int M, N;
-const unsigned long long int tope = 10e+2;
+const unsigned long long int tope = 10e+16;
 
 //**********************************************************************
 // plantilla de función para generar un entero aleatorio uniformemente
@@ -59,15 +59,13 @@ void funcion_etapa(int id)
       j--;
   }
 
-  cout << "id: " << id << "p: " << p << endl;
-
   MPI_Status status;
   int valor = 0;
 
   if(id == 0){                   // Proceso 0 genera los valores
 
     for(int i = 0; i < N; i++){
-      valor = 2*3*5*7*11*13*17*aleatorio<0, tope>();
+      valor = aleatorio<0, tope>();
 
       if(valor%p == 0)
 	MPI_Ssend(&valor, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
