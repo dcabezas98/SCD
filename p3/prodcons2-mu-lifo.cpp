@@ -96,23 +96,21 @@ void funcion_consumidor(int id)
 
 void funcion_buffer()
 {
-   int        buffer[tam_vector],      // buffer con celdas ocupadas y vacías
-              valor,                   // valor recibido o enviado
-              primera_libre       = 0, // índice de primera celda libre
-              primera_ocupada     = 0, // índice de primera celda ocupada
-              num_celdas_ocupadas = 0, // número de celdas ocupadas
-              etiq_emisor_aceptable ;  // etiqueta de los emisores aceptables
-   MPI_Status estado ;                 // metadatos del mensaje recibido
+  int buffer[tam_vector],      // buffer con celdas ocupadas y vacías
+    valor,                   // valor recibido o enviado
+    contador = 0,
+    etiq_emisor_aceptable ;  // etiqueta de los emisores aceptables
+  MPI_Status estado ;                 // metadatos del mensaje recibido
 
-   int id_fuente;
+  int id_fuente;
 
    for( unsigned int i=0 ; i < num_items*2 ; i++ )
    {
       // 1. determinar si puede enviar solo prod., solo cons, o todos
 
-      if ( num_celdas_ocupadas == 0 )               // si buffer vacío
+      if ( contador == 0 )               // si buffer vacío
          etiq_emisor_aceptable = etiq_prod ;       // $~~~$ solo prod.
-      else if ( num_celdas_ocupadas == tam_vector ) // si buffer lleno
+      else if ( contador == tam_vector ) // si buffer lleno
          etiq_emisor_aceptable = etiq_cons ;      // $~~~$ solo cons.
       else                                          // si no vacío ni lleno
          etiq_emisor_aceptable = MPI_ANY_TAG ;     // $~~~$ cualquiera
@@ -126,16 +124,12 @@ void funcion_buffer()
       id_fuente = estado.MPI_SOURCE;
 
       if(id_fuente < np){ // si ha sido el productor: insertar en buffer
-	buffer[primera_libre] = valor ;
-	primera_libre = (primera_libre+1) % tam_vector ;
-	num_celdas_ocupadas++ ;
+	buffer[contador++] = valor ;
 	cout << "\t\t\tBuffer ha recibido valor " << valor << endl ;
       }
 
       else { // if(id_fuente > np) {  // si ha sido el consumidor: extraer y enviarle
-	valor = buffer[primera_ocupada] ;
-	primera_ocupada = (primera_ocupada+1) % tam_vector ;
-	num_celdas_ocupadas-- ;
+	valor = buffer[--contador] ;
 	cout << "\t\t\tBuffer va a enviar valor " << valor << endl ;
 	MPI_Ssend( &valor, 1, MPI_INT, id_fuente, etiq_cons, MPI_COMM_WORLD);
       }
