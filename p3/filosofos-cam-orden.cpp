@@ -54,8 +54,6 @@ void funcion_camarero()
   int turno = 0;
 
   int flag;
-
-  bool encontrado;
   
   while(true){
     if(sentados == tope){
@@ -67,28 +65,28 @@ void funcion_camarero()
     }
       else{
 
-	encontrado = false;
-
-	while(!encontrado){
+	while(true){
 
 	  MPI_Iprobe(turno, sentarse, MPI_COMM_WORLD, &flag, &estado); // Compruebo si el que tiene el turno quiere sentarse
 
 	  if(flag > 0){
-	    encontrado = true;
 	    emisor_valido = turno;
 	    etiq_valida = sentarse;
 	    sentados++;
 
 	    turno=(turno+2)%(num_filosofos*2);
+
+	    break;
 	  }
 
 	  MPI_Iprobe(MPI_ANY_SOURCE, levantarse, MPI_COMM_WORLD, &flag, &estado); // Compruebo si alguien quiere levantarse
 
 	  if(flag > 0){
-	    encontrado = true;
 	    emisor_valido = MPI_ANY_SOURCE;
 	    etiq_valida = levantarse;
 	    sentados--;
+
+	    break;
 	  }
 	}
       }
