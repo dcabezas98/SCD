@@ -84,23 +84,18 @@ int main( int argc, char *argv[] )
             case 4 : TareaA(); TareaB(); TareaC();           break ;
          }
 
-         // calcular el siguiente instante de inicio del ciclo secundario
+	 // calcular el siguiente instante de inicio del ciclo secundario
          ini_sec += Ts ;
 
-	 // comprobar si hay retrasos
+	 // esperar hasta el inicio de la siguiente iteración del ciclo secundario
+         sleep_until( ini_sec );
 	 
+	 // comprobar si hay retrasos
 	 time_point<steady_clock> t=steady_clock::now();
 
-	 if(t>ini_sec){
-	   cout << "Retraso de " << milliseconds_f(t-ini_sec).count() << " milisegundos." << endl;
-	   if(t>ini_sec+milliseconds(20))
-	     exit(-1);
-	 }
-      else
-	cout << "Iteración realizada dentro del tiempo esperado." << endl;
-	 
-   // esperar hasta el inicio de la siguiente iteración del ciclo secundario
-         sleep_until( ini_sec );
+	 cout << "Retardo de " << milliseconds_f(t-ini_sec).count() << " milisegundos." << endl;
+	 if(t>ini_sec+milliseconds(20))
+	   exit(-1);
       }
    }
 }
